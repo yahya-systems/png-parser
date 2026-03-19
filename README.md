@@ -42,4 +42,4 @@ Benchmarked on a 1200x1200 PNG (`goku.png`), Apple M3, clang -O3:
 - Full decode pipeline: ~22ms
 - DEFLATE only: ~12.5ms
 
-![goku](images/goku.png)
+![goku](goku.png)
