@@ -20,13 +20,15 @@ no third party libraries. The goal was complete understanding of the full PNG pi
 
 ## Usage
 ```cpp
-openImage(imageUrl, *width, *height, *channel, outputChannel, flip)
+uint8_t* buffer = openImage(imageUrl, *width, *height, *channel, outputChannel, flip)
 ```
 - `imageUrl` — path to the image file
 - `width` & `height` — filled with image dimensions
 - `channel` — filled with the original color channel
 - `outputChannel` — desired output channel, parser handles conversion
 - `flip` — vertically flip the image
+
+Returns a raw pixel buffer laid out as G, GA, RGB, or RGBA per pixel depending on `outputChannel`.
 
 ## Architecture
 The initial implementation used Huffman trees, which required pointer chasing per bit — 
@@ -36,6 +38,8 @@ single direct lookup. The 5-bit secondary table handles longer codes. The result
 branchless, cache-friendly decoding at a fraction of the cost.
 
 ## Performance
-Benchmarked on a 1200x1200 PNG, Apple M3, clang -O3:
+Benchmarked on a 1200x1200 PNG (`goku.png`), Apple M3, clang -O3:
 - Full decode pipeline: ~22ms
 - DEFLATE only: ~12.5ms
+
+![goku](images/goku.png)
