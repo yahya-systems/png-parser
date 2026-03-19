@@ -1,12 +1,14 @@
 #include "image-processor.h"
-#include "deflate/deflate.h"
+#include "deflate/deflate.hpp"
 #include <cstdio>
+
 #include <cstring>
+#include <ctime>
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include <zlib.h>
+#include <time.h>
+#include <zconf.h>
 
 bool endsWith(const char *filename, const char *suffix) {
   size_t lenFile = strlen(filename);
@@ -66,24 +68,6 @@ struct HeaderInfo {
   uint32_t YpixelPerM;
   uint32_t colorsUsed;
   uint32_t importantColors;
-};
-
-struct APP0 {
-  uint16_t byteLength;
-  char identifier[5];
-  uint16_t version;
-  uint8_t units;
-  uint16_t xDensity;
-  uint16_t yDensity;
-  uint8_t xThumbnail;
-  uint8_t yThumbnail;
-};
-
-struct ComponentData {
-  uint8_t identifier;
-  uint8_t H;
-  uint8_t V;
-  uint8_t qtSelector;
 };
 
 uint32_t jumpToChunk(uint8_t *chunk, FILE *file) {
@@ -473,11 +457,12 @@ uint32_t decode_PNG8(unsigned char *compressed_data,
   uint32_t rowBytes = width * pngColorTypeToChannel(colorType);
   uint32_t rowWithFilter = 1 + rowBytes;
   uint32_t totalInflalted = height * rowWithFilter;
-  uint8_t *uncompressed_data = (uint8_t *)malloc(totalInflalted);
+  unsigned char *uncompressed_data = (unsigned char *)malloc(totalInflalted);
 
-  if (deflate::uncompress(compressed_data, compressed_data_length,
-                          uncompressed_data, totalInflalted) != 0) {
-    return 1;
+  uint32_t result = deflate::uncompress(compressed_data, compressed_data_length,
+                                        uncompressed_data, totalInflalted);
+  if (result != deflate::SUCCESS) {
+    return result;
   }
 
   CHANNEL imageChannel = pngColorTypeToChannel(colorType);
@@ -541,17 +526,14 @@ unsigned char *openImagePNG(const char *imageURL, uint32_t *width,
   readBytes(imageProperties, 5, 1, file);
 
   if (imageProperties[2] != 0) {
-    printf("no support for non deflate PNGs\n");
     return nullptr;
   }
 
   if (imageProperties[3] != 0) {
-    printf("unsupposed filtering method for PNG\n");
     return nullptr;
   }
 
   if (imageProperties[4] != 0) {
-    printf("no support for Adam7 Interlace\n");
     return nullptr;
   }
 
@@ -586,9 +568,12 @@ unsigned char *openImagePNG(const char *imageURL, uint32_t *width,
   uint32_t imageDataLength = 0;
 
   if (imageProperties[0] == 8) {
-    decode_PNG8(data, totalLength, dimensions[0], dimensions[1],
-                imageProperties[1], outputChannel, &imageData, &imageDataLength,
-                imageChannel);
+    uint32_t result = decode_PNG8(
+        data, totalLength, dimensions[0], dimensions[1], imageProperties[1],
+        outputChannel, &imageData, &imageDataLength, imageChannel);
+    if (result != 0) {
+      return nullptr;
+    }
   }
 
   if (flip) {
@@ -614,8 +599,7 @@ unsigned char *openImageBMP(const char *imageURL, uint32_t *width,
   FILE *file;
   file = fopen(imageURL, "rb");
   if (!file) {
-    printf("FAILED TO OPEN FILE %s\n", imageURL);
-    exit(-1);
+    return nullptr;
   }
 
   Header header;
@@ -628,11 +612,9 @@ unsigned char *openImageBMP(const char *imageURL, uint32_t *width,
   fseek(file, header.offset, SEEK_SET);
 
   if (headerInfo.bitsPerPixel != 24) {
-    printf("NO SUPPORT FOR NON 24 BITS PER PIXEL BMPs\n");
     return nullptr;
   }
   if (headerInfo.compression != 0) {
-    printf("NO SUPPORT FOR COMPRESSED BMPs\n");
     return nullptr;
   }
 
@@ -649,16 +631,13 @@ unsigned char *openImageBMP(const char *imageURL, uint32_t *width,
   unsigned char *imageData = (unsigned char *)malloc(size);
 
   if (!imageData) {
-    printf("FATAL : OUT OF MEMORY\n");
-    exit(-1);
+    return nullptr;
   }
   if (flip) {
     for (uint32_t i = 0; i < *height; i++) {
       unsigned char *rowPtr = imageData + i * byteWidth;
       if (fread(rowPtr, 1, byteWidth, file) != byteWidth) {
-        printf("FATAL : FAILED TO EXTRACT IMAGE ROW\n");
-        free(imageData);
-        exit(-1);
+        return nullptr;
       }
       fseek(file, padding, SEEK_CUR);
     }
@@ -666,9 +645,8 @@ unsigned char *openImageBMP(const char *imageURL, uint32_t *width,
     for (uint32_t i = 0; i < *height; i++) {
       unsigned char *rowPtr = imageData + size - byteWidth - i * byteWidth;
       if (fread(rowPtr, 1, byteWidth, file) != byteWidth) {
-        printf("FATAL : FAILED TO EXTRACT IMAGE ROW");
         free(imageData);
-        exit(-1);
+        return nullptr;
       }
       fseek(file, padding, SEEK_CUR);
     }
@@ -688,9 +666,8 @@ unsigned char *openImageBMP(const char *imageURL, uint32_t *width,
     uint32_t newSize = headerInfo.width * *height * 4;
     unsigned char *temp = (unsigned char *)malloc(newSize);
     if (!temp) {
-      printf("FATAL : OUT OF MEMORY\n");
       free(imageData);
-      exit(-1);
+      return nullptr;
     }
     for (uint32_t i = 0; i < headerInfo.width * *height; i++) {
       temp[4 * i] = imageData[3 * i + 2];
@@ -706,9 +683,8 @@ unsigned char *openImageBMP(const char *imageURL, uint32_t *width,
     uint32_t newSize = headerInfo.width * *height;
     unsigned char *temp = (unsigned char *)malloc(newSize);
     if (!temp) {
-      printf("FATAL : OUT OF MEMORY\n");
       free(imageData);
-      exit(-1);
+      return nullptr;
     }
     for (uint32_t i = 0; i < newSize; i++) {
       unsigned char color =
