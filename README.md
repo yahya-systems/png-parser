@@ -15,11 +15,12 @@ A PNG image parser with custom DEFLATE decoder implementation.
 - A BMP parser too.
 
 ## Usage
-- using png-parser is simple, all required is to run the command
+- using png-parser is simple, all required is to call the function :
+
 ```cpp
-```openImage(imageUrl, *width, *height, *channel, outputChannel, flip)```
+openImage(imageUrl, *width, *height, *channel, outputChannel, flip)
 ```
-  ```
+
 - `imageUrl` is basically the image file path.
 - `width` & `height` are pointers the png-parser would fill the image's width and height to.
 - `channel` is a pointer that png-parser fills with the original color channel of the image.
