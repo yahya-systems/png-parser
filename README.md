@@ -16,12 +16,15 @@ A PNG image parser with custom DEFLATE decoder implementation.
 
 ## Usage
 - using png-parser is simple, all required is to run the command
-`openImage(imageUrl, *width, *height, *channel, outputChannel, flip)`
-`imageUrl` is basically the image file path.
-`width` & `height` are pointers the png-parser would fill the image's width and height to.
-`channel` is a pointer that png-parser fills with the original color channel of the image.
-`outputChannel` is used to to specify the desired output channel of the image, png-parser will perform the required conversions.
-`flip` tells the parser whether to flip the image vertically or no.
+```cpp
+```openImage(imageUrl, *width, *height, *channel, outputChannel, flip)```
+```
+  ```
+- `imageUrl` is basically the image file path.
+- `width` & `height` are pointers the png-parser would fill the image's width and height to.
+- `channel` is a pointer that png-parser fills with the original color channel of the image.
+- `outputChannel` is used to to specify the desired output channel of the image, png-parser will perform the required conversions.
+- `flip` tells the parser whether to flip the image vertically or no.
 
 ## Architecture
 In the earlier version of this png-parser, the deflate implementation used trees, which has proven to be quite slow, taking 40 ms to decompress the data
