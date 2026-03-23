@@ -1,4 +1,4 @@
-#include "image-processor.h"
+#include "png-parser/image-processor.h"
 #include "deflate/deflate.hpp"
 #include <cstdio>
 
